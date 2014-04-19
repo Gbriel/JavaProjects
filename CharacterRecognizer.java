@@ -13,6 +13,13 @@
 */
 
 public class CharacterRecognizer {
+//main method will initialize and train NN
+// read in images from files for training 
+//and testing. Thus far it's just a main method...
+//what will it be later? create multiple NN's from 
+//saved weights and use a pool of threads to classify?
+//oh, this will only ever worry about single characters,
+//while higher classes will worry about documents.
   public static void main(String[] args) {
   
   }
