@@ -25,6 +25,41 @@ public class NeuralNet {
     }
   }
   
+  private void feedforward(boolean[] px) {
+    //input the pixel data to the input layer
+    for(int i = 0; i < 256; i++) {
+      input[i].setOutput(px[i]);
+    }
+
+    for(int i = 0; i < hidden.length; i++) {
+      hidden[i].squash();
+    }
+
+    for(int i = 0; i < output.length; i++) {
+      output[i].squash();
+    }
+
+  }
+
+  public void backpropagate(int target) {
+    //update deltas and weights for the output layer
+    for(int i =0; i < output.length; i++) {
+      double out = output[i].output();
+      output[i].updateDelta(out*(1-out)*(target-out));
+      output[i].updateWeights();
+    }
+    //update weights for output
+    for(int i =0; i < hidden.length; i++) {
+      double out = hidden[i].output();
+      double sum = 0;
+      for(int j = 0; j < output.length; j++) {
+        sum += output[j].getDelta()*output[j].getWeight(i);
+      }
+      hidden[i].updateDelta(out*(1-out)*sum);
+      hidden[i].updateWeights();
+    }
+  }
+
   public void train() {
   //read in images from a file
   
@@ -36,41 +71,47 @@ public class NeuralNet {
 class Neuron {
   private Neuron[] inputs;
   private double[] weights;
-  private int output;
+  private double output;
+  private double delta;
+  private double input;
   public static final double alpha = .1;
   
   public Neuron() {
   
   }
-  
+  public double getWeight(int i) {
+    return weights[i];
+  }
+  public void setOutput(boolean b) {
+    if(b == true) output = 1;
+    else output = 0;
+  }
   public Neuron(Neuron[] inputs) {
     inputs = inputs;
     for(int i = 0; i < inputs.length; i++)
       weights[i] = .5 - Math.random();
   }
   
-  private double squash() {
-    double sum = 0;
+  public void squash() {
+    input = 0;
     for(int i = 0; i < inputs.length; i++) 
-      sum += inputs[i].output()*weights[i];
-    return 1/(1+Math.exp(-sum));
-  }
-  
-  public void updateOutput() {
-    if(squash() > .5) output = 1;
-    else output = 0;
+      input += inputs[i].output()*weights[i];
+    output = 1/(1+Math.exp(-input));
   }
   
   public void updateWeights() {
     for(int i = 0; i < inputs.length; i++) {
-      weights[i] += alpha*(1-
+      weights[i] += alpha*input*delta;
     }
   }
   
-  public int output() { return output; }
+  public double output() { return output; }
+
+  public void updateDelta(double d) {
+    delta = d;
+  }
+
+  public double getDelta() { return delta; }
   
 }
 
-class SigmoidNeuron extends Neuron {
-  
-}
