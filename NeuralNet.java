@@ -1,33 +1,31 @@
 /*
-  A back-propagation trained NN for classifying handwritten digits,
-  though, potentially, generalizable to other images.
+  A back-propagation trained NN for classifation problems.
 */
 
 public class NeuralNet {
-  private Neuron[] input = new Neuron[256];
-  private Neuron[] hidden = new Neuron[20];
-  private Neuron[] output = new Neuron[10];
-  private Neuron[][] neurons = new Neuron[3][];
+  private InputNeuron[] input;
+  private SigmoidNeuron[] hidden;
+  private SigmoidNeuron[] output;
   
   //constructor 1.  Will make a 2ndary constructor that will take weights as input
-  public NeuralNet() {
-  //create 2D neuron array of the layers in order
-    neurons[0] = input;
-    neurons[1] = hidden;
-    neurons[2] = output;
+  public NeuralNet(int inputLength, int hiddenLength,int outputLength) {
+    input= new InputNeuron[inputLength];
+    hidden = new SigmoidNeuron[hiddenLength];
+    output = new SigmoidNeuron[outputLength];
     //init the input neurons, since they won't receive the same args
     for(int j = 0; j < input.length; j++)
-        input[j] = new Neuron();
+      input[j] = new InputNeuron();
      //init all the other layers, feeding them a reference to their inputs
-    for(int i = 0; i < 3; i++) {
-      for(int j = 1; j < neurons[i].length; j++)
-        neurons[i][j] = new Neuron(neurons[i-1]);
-    }
+    
+    for(int j = 0; j < hidden.length; j++)
+      hidden[j] = new SigmoidNeuron(input);
+    for(int j = 0; j < output.length; j++)
+      output[j] = new SigmoidNeuron(hidden);
   }
   
   private void feedforward(boolean[] px) {
     //input the pixel data to the input layer
-    for(int i = 0; i < 256; i++) {
+    for(int i = 0; i < input.length; i++) {
       input[i].setOutput(px[i]);
     }
 
@@ -38,14 +36,15 @@ public class NeuralNet {
     for(int i = 0; i < output.length; i++) {
       output[i].squash();
     }
-
   }
 
   public void backpropagate(int target) {
     //update deltas and weights for the output layer
     for(int i =0; i < output.length; i++) {
       double out = output[i].output();
-      output[i].updateDelta(out*(1-out)*(target-out));
+      int t = 0;
+      if(i == target) t= 1;
+      output[i].updateDelta(out*(1-out)*(t-out));
       output[i].updateWeights();
     }
     //update weights for output
@@ -60,53 +59,92 @@ public class NeuralNet {
     }
   }
 
-  public void train() {
-  //read in images from a file
+  public void train(boolean[][] images, int[] targets, int reps) {
+    for(int j = 0; j < reps; j++) {
+      for(int i = 0; i < targets.length; i++) {
+        feedforward(images[i]);
+        backpropagate(targets[i]);
+      }
+    }
+  }
   
+  public double test(boolean[][] images, int[] targets) {
+    
+    double classificationRate = 0;
   //then classify each several times, probably.
+    for(int i = 0; i < targets.length; i++) {
+      feedforward(images[i]);
+      double lowestVal = 0;
+      double lowestIndex = 0;
+      for(int j = 0; j<10; j++) {
+        if(lowestVal < output[j].output()) {
+          lowestVal = output[j].output();
+          lowestIndex = j;
+        }
+      }
+      if (lowestIndex == targets[i]) classificationRate++;
+    }
+    classificationRate /= targets.length;
+ //   System.out.println("*** "+ classificationRate + " ***\n");
+    return classificationRate;
   }
   
 }
 
-class Neuron {
+abstract class Neuron {
+  public abstract double output();
+}
+
+class InputNeuron extends Neuron {
+  private double output;
+  public InputNeuron() {
+  }
+  public void setOutput(boolean b) {
+    if(b) output = 1;
+    else output = 0;
+  }
+  public double output() { return output; }
+}
+
+class SigmoidNeuron extends Neuron {
+
   private Neuron[] inputs;
   private double[] weights;
-  private double output;
   private double delta;
   private double input;
-  public static final double alpha = .1;
+  private double output;
+  public static final double alpha = .1 ;
   
-  public Neuron() {
-  
+  public SigmoidNeuron(Neuron[] inputs) {
+    this.inputs = inputs;
+    weights = new double[inputs.length];
+    for(int i = 0; i < inputs.length; i++) {
+      weights[i] = 2*(.5 - Math.random());
+    }
   }
+  public double output() { return output; }
   public double getWeight(int i) {
     return weights[i];
   }
-  public void setOutput(boolean b) {
-    if(b == true) output = 1;
-    else output = 0;
-  }
-  public Neuron(Neuron[] inputs) {
-    inputs = inputs;
-    for(int i = 0; i < inputs.length; i++)
-      weights[i] = .5 - Math.random();
+  
+  public void printWeights() {
+    for(int i = 0; i < inputs.length; i++) System.out.println(weights[i]);
   }
   
   public void squash() {
     input = 0;
-    for(int i = 0; i < inputs.length; i++) 
+    for(int i = 0; i < inputs.length; i++) {
       input += inputs[i].output()*weights[i];
+    }
     output = 1/(1+Math.exp(-input));
   }
   
   public void updateWeights() {
     for(int i = 0; i < inputs.length; i++) {
-      weights[i] += alpha*input*delta;
+      weights[i] += alpha*inputs[i].output()*delta;
     }
   }
   
-  public double output() { return output; }
-
   public void updateDelta(double d) {
     delta = d;
   }
