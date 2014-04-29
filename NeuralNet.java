@@ -6,17 +6,21 @@ public class NeuralNet {
   private InputNeuron[] input;
   private SigmoidNeuron[] hidden;
   private SigmoidNeuron[] output;
+  public final double alpha;
   
   //constructor 1.  Will make a 2ndary constructor that will take weights as input
-  public NeuralNet(int inputLength, int hiddenLength,int outputLength) {
+  public NeuralNet(int inputLength, int hiddenLength,int outputLength,double a) {
+    alpha = a;
+  
     input= new InputNeuron[inputLength];
     hidden = new SigmoidNeuron[hiddenLength];
     output = new SigmoidNeuron[outputLength];
+    
     //init the input neurons, since they won't receive the same args
     for(int j = 0; j < input.length; j++)
       input[j] = new InputNeuron();
+      
      //init all the other layers, feeding them a reference to their inputs
-    
     for(int j = 0; j < hidden.length; j++)
       hidden[j] = new SigmoidNeuron(input);
     for(int j = 0; j < output.length; j++)
@@ -60,12 +64,28 @@ public class NeuralNet {
   }
 
   public void train(boolean[][] images, int[] targets, int reps) {
+  //loop through the same set of training examples
     for(int j = 0; j < reps; j++) {
+      //train on each example in the set
       for(int i = 0; i < targets.length; i++) {
+        //run the NN, then adjust
         feedforward(images[i]);
         backpropagate(targets[i]);
       }
     }
+  }
+  
+  public int classify(boolean[] image) {
+    feedforward(image);
+    double lowestVal = 0;
+    int lowestIndex = 0;
+      for(int j = 0; j<10; j++) {
+        if(lowestVal < output[j].output()) {
+          lowestVal = output[j].output();
+          lowestIndex = j;
+        }
+      }
+    return lowestIndex;
   }
   
   public double test(boolean[][] images, int[] targets) {
@@ -89,67 +109,68 @@ public class NeuralNet {
     return classificationRate;
   }
   
-}
-
-abstract class Neuron {
-  public abstract double output();
-}
-
-class InputNeuron extends Neuron {
-  private double output;
-  public InputNeuron() {
+  private abstract class Neuron {
+    public abstract double output();
   }
-  public void setOutput(boolean b) {
-    if(b) output = 1;
-    else output = 0;
-  }
-  public double output() { return output; }
-}
 
-class SigmoidNeuron extends Neuron {
-
-  private Neuron[] inputs;
-  private double[] weights;
-  private double delta;
-  private double input;
-  private double output;
-  public static final double alpha = .1 ;
-  
-  public SigmoidNeuron(Neuron[] inputs) {
-    this.inputs = inputs;
-    weights = new double[inputs.length];
-    for(int i = 0; i < inputs.length; i++) {
-      weights[i] = 2*(.5 - Math.random());
+  private class InputNeuron extends Neuron {
+    private double output;
+    public InputNeuron() {
     }
-  }
-  public double output() { return output; }
-  public double getWeight(int i) {
-    return weights[i];
-  }
-  
-  public void printWeights() {
-    for(int i = 0; i < inputs.length; i++) System.out.println(weights[i]);
-  }
-  
-  public void squash() {
-    input = 0;
-    for(int i = 0; i < inputs.length; i++) {
-      input += inputs[i].output()*weights[i];
+    public void setOutput(boolean b) {
+      if(b) output = 1;
+      else output = 0;
     }
-    output = 1/(1+Math.exp(-input));
-  }
-  
-  public void updateWeights() {
-    for(int i = 0; i < inputs.length; i++) {
-      weights[i] += alpha*inputs[i].output()*delta;
-    }
-  }
-  
-  public void updateDelta(double d) {
-    delta = d;
+    public double output() { return output; }
   }
 
-  public double getDelta() { return delta; }
+  private class SigmoidNeuron extends Neuron {
+
+    private Neuron[] inputs;
+    private double[] weights;
+    private double delta;
+    private double input;
+    private double output;
   
+    public SigmoidNeuron(Neuron[] inputs) {
+      this.inputs = inputs;
+      weights = new double[inputs.length];
+      for(int i = 0; i < inputs.length; i++) {
+        weights[i] = 2*(.5 - Math.random());
+      }
+    }
+    public double output() { return output; }
+    
+    public double getWeight(int i) {
+      return weights[i];
+    }
+  
+    public void printWeights() {
+      for(int i = 0; i < inputs.length; i++) System.out.println(weights[i]);
+    }
+  
+    public void squash() {
+      input = 0;
+      for(int i = 0; i < inputs.length; i++) {
+        input += inputs[i].output()*weights[i];
+      }
+      output = 1/(1+Math.exp(-input));
+    }
+  
+    public void updateWeights() {
+      for(int i = 0; i < inputs.length; i++) {
+        weights[i] += alpha*inputs[i].output()*delta;
+      }
+    }
+  
+    public void updateDelta(double d) {
+      delta = d;
+    }
+
+    public double getDelta() { return delta; }
+  
+  }
 }
+
+
 

@@ -8,6 +8,10 @@
   and would like to keep the code well-
   commented and VC'd via Git.
   
+  Uses the StdDraw class from 
+  <a href="http://introcs.cs.princeton.edu/15inout">Section 1.5</a>
+  By Robert Sedgewick and Kevin Wayne
+  
   Gabriel Kopito
   4/18/2014
 */
@@ -15,15 +19,9 @@ import java.io.*;
 import java.util.*;
 import java.nio.file.*;
 public class CharacterRecognizer {
-//main method will initialize and train NN
-// read in images from files for training 
-//and testing. Thus far it's just a main method...
-//what will it be later? create multiple NN's from 
-//saved weights and use a pool of threads to classify?
-//oh, this will only ever worry about single characters,
-//while higher classes will worry about documents.
+  private NeuralNet NN;
   public CharacterRecognizer() {
-    NeuralNet NN = new NeuralNet(256,40,10);
+    NN = new NeuralNet(256,20,10,0.2);
     DataSet data = processData();
     
     //seperate data into test and training sets
@@ -33,11 +31,13 @@ public class CharacterRecognizer {
     int[] trainTargets = new int[trainLength];
     boolean[][] testImages = new boolean[testLength][256];
     int[] testTargets = new int[testLength];
+    
     //use reservoir algorithm to choose a random subset of the indicies for testing
     int[] randomIndicies = reservoirAlgorithm(testLength,data.targets.length);
     Arrays.sort(randomIndicies);
     int randomIndex = 0;
     int trainIndex = 0;
+    
     //construct test and training sets using auxilliary randomIndicies[]
     for(int i = 0; i < data.targets.length; i++) {
       if(randomIndex < testLength && i == randomIndicies[randomIndex]) {
@@ -51,15 +51,47 @@ public class CharacterRecognizer {
       }
     }
     
-    //plot the efficacy of the NN on the test set vs. the number of times through the training loop
-    double trainReps = 100;
-    for(int i = 0; i < trainReps; i++) {
-      NN.train(trainImages,trainTargets,i);
-      StdDraw.point(i/trainReps,NN.test(testImages,testTargets));
-    }
-    
-    //todo... add a graph showing the results of adjusting alpha. See if we hit any local minima when it gets too low, or fail to converge with it too large. We could create a table showing for each alpha (.05 increments?) the max test score it got (average three trials at that number of trainReps) and the number of trainReps it took to get that. Output the one with the highest test score and the lowest train reps.
+    //train
+    NN.train(trainImages,trainTargets,30);
+    //test on the test set
+    System.out.println(classifyTestSet(testImages,testTargets));
   }
+  
+  //classifies the entire test set, returns the "correct classification" rate
+  public double classifyTestSet(boolean[][] testImages, int[] targets) {
+    return NN.test(testImages,targets);
+  }
+  
+  //classify a single image whose correct class is known
+  public void classifyImage(boolean[] image, int target) {
+  //draw image from pixels
+    for(int i = 0; i < 256;i++) {
+      if(image[i]) StdDraw.filledSquare((i%16 + 1)/16.0,1-(i/16 +1)/16.0,1/16.0);
+      else StdDraw.square((i%16 + 1)/16.0,1-(i/16 + 1)/16.0,1/16.0);
+    }
+    //classify, and output the results
+    int result = NN.classify(image);
+    String res;
+    if(result==target) res = "Correctly";
+    else res = "Incorrectly";
+    System.out.println(res+ " classified " +target + " as " + result);
+  }
+  public void table(boolean[][] trainImages, int[] trainTargets, boolean[][] testImages, int[] testTargets) {
+      //cycle through alpha, training reps, hidden neurons      
+      double[] scores = new double[125];
+      System.out.println("score | trnReps | alpha | hidden");
+      for(int hiddenNeurons = 1; hiddenNeurons < 6; hiddenNeurons++) {
+        for(int alpha = 0; alpha < 5; alpha++) {
+          for(int trainingReps = 0; trainingReps < 5; trainingReps++) {    
+            NeuralNet NN = new NeuralNet(256,hiddenNeurons*20 + 1,10,alpha*0.1 + 0.01);
+            NN.train(trainImages,trainTargets,trainingReps*9 + 1);
+            double score = NN.test(testImages,testTargets);
+            System.out.println("---------------------------------");
+            System.out.printf("%7d %7.2f %7d %7.2f \n",(hiddenNeurons*20 + 1),(alpha*0.1 + 0.01),(trainingReps*9 + 1),score);
+          } 
+        }      
+      }
+    }
   
   //select a random set of indicies to use for the test set
   public int[] reservoirAlgorithm(int k, int length) {
