@@ -1,7 +1,9 @@
 /*
   A back-propagation trained NN for classifation problems.
 */
-
+import java.io.*;
+import java.util.*;
+import java.nio.file.*;
 public class NeuralNet {
   private InputNeuron[] input;
   private SigmoidNeuron[] hidden;
@@ -41,7 +43,60 @@ public class NeuralNet {
       output[i].squash();
     }
   }
-
+ 
+  /*
+    This constructor attempts to create a new NN trained off weights
+    stored in the file weights.txt, throwing an IOException if problems
+    arise.
+  */
+  public NeuralNet() throws Exception {   
+    try {   
+      Scanner in = new Scanner(Paths.get("weights.txt"));
+      int numberOfNeurons;
+      //get alpha
+      String[] split;
+      double[] weights;
+      alpha = Double.parseDouble(in.nextLine());
+      input = new InputNeuron[Integer.parseInt(in.nextLine())];
+      //initialize input neurons
+      for(int i = 0; i < input.length; i++)
+          input[i] = new InputNeuron();
+      //create hidden layer
+      hidden = new SigmoidNeuron[Integer.parseInt(in.nextLine())];
+      //populate hidden layer
+      for(int j = 0; j < hidden.length; j++) {
+        hidden[j] = new SigmoidNeuron(input);
+      }
+      //set weights for hidden layer
+      for(int i = 0; i < hidden.length; i++) {
+        weights = new double[input.length];
+        split = in.nextLine().split(" ");
+        if(split.length == input.length) {
+          for(int j = 0; j < input.length; j++) {
+            weights[j] = Double.parseDouble(split[j]);
+          }
+          hidden[i].setWeights(weights);
+        } else throw new IOException("length of hidden layer weight vectors differs from expected " + split.length + " " + hidden.length);
+      }
+      //populate output layer
+      output = new SigmoidNeuron[Integer.parseInt(in.nextLine())];
+      for(int j = 0; j < output.length; j++)
+          output[j] = new SigmoidNeuron(hidden);
+      //set weights for hidden layer
+      for(int i = 0; i < output.length; i++) {
+        weights = new double[hidden.length];
+        split = in.nextLine().split(" ");
+        if(split.length == hidden.length) {
+          for(int j = 0; j < hidden.length; j++)
+            weights[j] = Double.parseDouble(split[j]);
+          output[i].setWeights(weights);
+        } else throw new IOException("length of output layer weight vectors differs from expected " + split.length + " " + output.length);
+      }
+    } catch(IOException e) {
+      throw new Exception("Error trying to create new NN from weights.txt: " + e.getMessage());
+    }
+  }
+  
   public void backpropagate(int target) {
     //update deltas and weights for the output layer
     for(int i =0; i < output.length; i++) {
@@ -63,6 +118,7 @@ public class NeuralNet {
     }
   }
 
+
   public void train(boolean[][] images, int[] targets, int reps) {
   //loop through the same set of training examples
     for(int j = 0; j < reps; j++) {
@@ -72,6 +128,34 @@ public class NeuralNet {
         feedforward(images[i]);
         backpropagate(targets[i]);
       }
+    }
+    
+    //update weights file
+    updateWeights();
+  }
+  
+  private void updateWeights() {
+    try {
+      FileWriter fw = new FileWriter("weights.txt");
+      fw.write(alpha + "\n");
+      fw.write(input.length + "\n");
+      fw.write(hidden.length + "\n");
+      for(int i = 0; i < hidden.length; i++) {
+        double[] weights = hidden[i].getWeights();
+        for(int j = 0; j < weights.length; j++) 
+          fw.write(weights[j] + " ");
+        fw.write("\n");
+      }
+      fw.write(output.length + "\n");
+      for(int i = 0; i < output.length; i++) {
+        double[] weights = output[i].getWeights();
+        for(int j = 0; j < weights.length; j++) 
+          fw.write(weights[j] + " ");
+        fw.write("\n");
+      }
+      fw.close();
+    } catch(IOException e) {
+      System.err.println(e.getMessage());
     }
   }
   
@@ -144,7 +228,13 @@ public class NeuralNet {
     public double getWeight(int i) {
       return weights[i];
     }
-  
+    
+    public double[] getWeights() { return weights; }
+    
+    public void setWeights(double[] w) {
+      this.weights = w;
+    }
+    
     public void printWeights() {
       for(int i = 0; i < inputs.length; i++) System.out.println(weights[i]);
     }

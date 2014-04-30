@@ -55,6 +55,8 @@ public class CharacterRecognizer {
     NN.train(trainImages,trainTargets,30);
     //test on the test set
     System.out.println(classifyTestSet(testImages,testTargets));
+    
+    
   }
   
   //classifies the entire test set, returns the "correct classification" rate
