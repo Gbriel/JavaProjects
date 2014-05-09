@@ -20,17 +20,26 @@ import java.util.*;
 import java.nio.file.*;
 public class CharacterRecognizer {
   private NeuralNet NN;
-  public CharacterRecognizer() {
-    NN = new NeuralNet(256,20,10,0.2);
-    DataSet data = processData();
+  private int size;
+  private int imagePix;
+  private boolean[][] trainImages;
+  private int[] trainTargets;
+  private boolean[][] testImages;
+  private  int[] testTargets;
+  
+  public CharacterRecognizer(int size, int hiddenLength,int outputLength, double alpha) {
+    this.size = size;
+    imagePix = size*size;
+    NN = new NeuralNet(imagePix,hiddenLength,outputLength,alpha);
+    DataSet data = processData(); 
     
     //seperate data into test and training sets
-    int testLength = 150;
+    int testLength = 450;
     int trainLength = data.targets.length - testLength;
-    boolean[][] trainImages = new boolean[trainLength][256];
-    int[] trainTargets = new int[trainLength];
-    boolean[][] testImages = new boolean[testLength][256];
-    int[] testTargets = new int[testLength];
+    trainImages = new boolean[trainLength][imagePix];
+    trainTargets = new int[trainLength];
+    testImages = new boolean[testLength][imagePix];
+    testTargets = new int[testLength];
     
     //use reservoir algorithm to choose a random subset of the indicies for testing
     int[] randomIndicies = reservoirAlgorithm(testLength,data.targets.length);
@@ -50,13 +59,13 @@ public class CharacterRecognizer {
         trainIndex++;
       }
     }
-    
-    //train
-    NN.train(trainImages,trainTargets,30);
-    //test on the test set
-    System.out.println(classifyTestSet(testImages,testTargets));
-    
-    
+   
+  }
+  
+  //train by #epochs before reporting the classification rate
+  public double trainAndReport(int epochs) {
+    NN.train(trainImages,trainTargets,epochs);
+    return NN.test(testImages,testTargets);
   }
   
   //classifies the entire test set, returns the "correct classification" rate
@@ -67,9 +76,9 @@ public class CharacterRecognizer {
   //classify a single image whose correct class is known
   public void classifyImage(boolean[] image, int target) {
   //draw image from pixels
-    for(int i = 0; i < 256;i++) {
-      if(image[i]) StdDraw.filledSquare((i%16 + 1)/16.0,1-(i/16 +1)/16.0,1/16.0);
-      else StdDraw.square((i%16 + 1)/16.0,1-(i/16 + 1)/16.0,1/16.0);
+    for(int i = 0; i < imagePix;i++) {
+      if(image[i]) StdDraw.filledSquare((i%size + 1)/(size*1.0),1-(i/size +1)/(size*1.0),1/(size*1.0));
+      else StdDraw.square((i%size + 1)/(size*1.0),1-(i/size + 1)/(size*1.0),1/(size*1.0));
     }
     //classify, and output the results
     int result = NN.classify(image);
@@ -78,22 +87,6 @@ public class CharacterRecognizer {
     else res = "Incorrectly";
     System.out.println(res+ " classified " +target + " as " + result);
   }
-  public void table(boolean[][] trainImages, int[] trainTargets, boolean[][] testImages, int[] testTargets) {
-      //cycle through alpha, training reps, hidden neurons      
-      double[] scores = new double[125];
-      System.out.println("score | trnReps | alpha | hidden");
-      for(int hiddenNeurons = 1; hiddenNeurons < 6; hiddenNeurons++) {
-        for(int alpha = 0; alpha < 5; alpha++) {
-          for(int trainingReps = 0; trainingReps < 5; trainingReps++) {    
-            NeuralNet NN = new NeuralNet(256,hiddenNeurons*20 + 1,10,alpha*0.1 + 0.01);
-            NN.train(trainImages,trainTargets,trainingReps*9 + 1);
-            double score = NN.test(testImages,testTargets);
-            System.out.println("---------------------------------");
-            System.out.printf("%7d %7.2f %7d %7.2f \n",(hiddenNeurons*20 + 1),(alpha*0.1 + 0.01),(trainingReps*9 + 1),score);
-          } 
-        }      
-      }
-    }
   
   //select a random set of indicies to use for the test set
   public int[] reservoirAlgorithm(int k, int length) {
@@ -108,33 +101,36 @@ public class CharacterRecognizer {
     return indicies;
   }
   
+  //written specifically to process the data in my "Img" folder
   private DataSet processData() {
     try{
-      boolean[][] images = new boolean[1593][256];
+      boolean[][] images = new boolean[3410][imagePix];
       int index = 0;
-      int[] targets = new int[1593];
-      Scanner in = new Scanner(Paths.get("digitdata.txt"));
-  
+      int[] targets = new int[3410];
+      Scanner in = new Scanner(Paths.get("ImgProcessed"));
       while(in.hasNextLine()) {
 
       //preprocess the digitdata file via regex
         String[] split = in.nextLine().split(" ");
         //create a boolean array, the format used by the NN
-        boolean[] px = new boolean[256];
-        for(int i = 0; i < 256; i++) {
-          if(split[i].equals("1.0000")) px[i] =  true;
+        boolean[] px = new boolean[imagePix];
+        for(int i = 0; i < imagePix; i++) {
+          if(split[i].equals("1")) px[i] =  true;
           else px[i] = false;
         }
         images[index] = px;
         //get the target value
         int target = 0;
-        
-        for(int i = 256; i < 266; i++) {
-          if(split[i].equals("1")) { 
-            target = i - 256;
-        //    targetSpread[target]++;
-            break;
+        if(split.length > imagePix+1) {
+          for(int i = imagePix; i < imagePix+10; i++) {
+            if(split[i].equals("1")) { 
+              target = i - imagePix;
+          //    targetSpread[target]++;
+              break;
+            }
           }
+        } else {
+          target = Integer.parseInt(split[imagePix]);
         }
         targets[index] = target;
         index++;
@@ -144,12 +140,12 @@ public class CharacterRecognizer {
       data.images = images;
       data.targets = targets;
       return data;
-    } catch (IOException e) { System.err.println(e.getMessage()); }
+    } catch (IOException e) { System.err.println(e.getMessage() + " arrrg"); }
     return null;
   }
-  
+  //process the data, create a NN, still need to call "trainAndReport()" to train
   public static void main(String[] args) {
-    CharacterRecognizer CR = new CharacterRecognizer();
+    CharacterRecognizer CR = new CharacterRecognizer(16,100,63,0.2);
   }
   
   private class DataSet {

@@ -8,7 +8,7 @@ public class NeuralNet {
   private InputNeuron[] input;
   private SigmoidNeuron[] hidden;
   private SigmoidNeuron[] output;
-  public final double alpha;
+  private double alpha;
   
   //constructor 1.  Will make a 2ndary constructor that will take weights as input
   public NeuralNet(int inputLength, int hiddenLength,int outputLength,double a) {
@@ -129,9 +129,10 @@ public class NeuralNet {
         backpropagate(targets[i]);
       }
     }
-    
+    //decrease the rate of change
+  //  alpha *= .97;
     //update weights file
-    updateWeights();
+ //   updateWeights();
   }
   
   private void updateWeights() {
@@ -163,7 +164,7 @@ public class NeuralNet {
     feedforward(image);
     double lowestVal = 0;
     int lowestIndex = 0;
-      for(int j = 0; j<10; j++) {
+      for(int j = 0; j<output.length; j++) {
         if(lowestVal < output[j].output()) {
           lowestVal = output[j].output();
           lowestIndex = j;
@@ -180,7 +181,7 @@ public class NeuralNet {
       feedforward(images[i]);
       double lowestVal = 0;
       double lowestIndex = 0;
-      for(int j = 0; j<10; j++) {
+      for(int j = 0; j<output.length; j++) {
         if(lowestVal < output[j].output()) {
           lowestVal = output[j].output();
           lowestIndex = j;
