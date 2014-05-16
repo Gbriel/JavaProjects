@@ -2,6 +2,8 @@ import java.awt.event.*;
 import java.io.*;
 import javax.swing.*;
 import javax.swing.filechooser.*;
+import java.awt.image.*;
+import javax.imageio.ImageIO;
 
 /**
  * A frame that has a menu for loading an image and a display area for the loaded image.
@@ -11,18 +13,17 @@ public class ImageViewerMenu extends JMenuBar
 
    private JLabel label;
    private JFileChooser chooser;
-   private JFrame frame;
-
-   public ImageViewerMenu(JFileChooser c,JLabel l,JFrame f)
+   private ImagePanel panel;
+   private CRFrame frame;
+   public ImageViewerMenu(JFileChooser c,ImagePanel ip,CRFrame f)
    {      
 
       // set up menu bar
       this.chooser = c;
-      this.label = l;
-      this.frame = f;
+      this.panel = ip;
       JMenu menu = new JMenu("File");
       this.add(menu);
-
+      this.frame = f;
       JMenuItem openItem = new JMenuItem("Open");
       menu.add(openItem);
       openItem.addActionListener(new ActionListener()
@@ -38,8 +39,14 @@ public class ImageViewerMenu extends JMenuBar
                if (result == JFileChooser.APPROVE_OPTION)
                {
                   String name = chooser.getSelectedFile().getPath();
-                  label.setIcon(new ImageIcon(name));
-                  frame.pack();
+                  try {
+                  //display the image
+                    BufferedImage bf = ImageIO.read(new File(name));
+                    frame.updateClassificationForImageFromFile(bf);
+                    panel.setImage(bf);
+                    //pass to frame for conversion to boolean[], classification
+
+                  } catch(IOException e) { System.err.println(e.getMessage()); }
                }
             }
          });
@@ -55,7 +62,6 @@ public class ImageViewerMenu extends JMenuBar
          });
 
       // use a label to display the images
-      add(label);
 
       // set up file chooser
 

@@ -27,14 +27,13 @@ public class CharacterRecognizer {
   private boolean[][] testImages;
   private  int[] testTargets;
   
-  public CharacterRecognizer(int size, int hiddenLength,int outputLength, double alpha) {
+  public CharacterRecognizer(int size, int hiddenLength,int outputLength, double alpha,int testPercent) {
     this.size = size;
     imagePix = size*size;
     NN = new NeuralNet(imagePix,hiddenLength,outputLength,alpha);
     DataSet data = processData(); 
-    
+    int testLength = (int)(0.01*data.targets.length*testPercent);
     //seperate data into test and training sets
-    int testLength = 450;
     int trainLength = data.targets.length - testLength;
     trainImages = new boolean[trainLength][imagePix];
     trainTargets = new int[trainLength];
@@ -59,8 +58,14 @@ public class CharacterRecognizer {
         trainIndex++;
       }
     }
-   
+    /*
+    trainAndReport(100);
+    for(int i = 50; i < 51; i++) {
+      classifyImage(testImages[i],testTargets[i]);
+    }
+   */
   }
+   
   
   //train by #epochs before reporting the classification rate
   public double trainAndReport(int epochs) {
@@ -88,6 +93,17 @@ public class CharacterRecognizer {
     System.out.println(res+ " classified " +target + " as " + result);
   }
   
+  public int getClass(boolean[] image) {
+    return NN.classify(image);
+  }
+  
+  public DataSet getTestSet() {
+    DataSet testset = new DataSet();
+    testset.images = testImages;
+    testset.targets = testTargets;
+    return testset;
+  }
+  
   //select a random set of indicies to use for the test set
   public int[] reservoirAlgorithm(int k, int length) {
     int[] indicies = new int[k];
@@ -107,7 +123,7 @@ public class CharacterRecognizer {
       boolean[][] images = new boolean[3410][imagePix];
       int index = 0;
       int[] targets = new int[3410];
-      Scanner in = new Scanner(Paths.get("ImgProcessed"));
+      Scanner in = new Scanner(Paths.get("ImgProcessed"+size));
       while(in.hasNextLine()) {
 
       //preprocess the digitdata file via regex
@@ -121,7 +137,7 @@ public class CharacterRecognizer {
         images[index] = px;
         //get the target value
         int target = 0;
-        if(split.length > imagePix+1) {
+     /*   if(split.length > imagePix+1) {
           for(int i = imagePix; i < imagePix+10; i++) {
             if(split[i].equals("1")) { 
               target = i - imagePix;
@@ -129,9 +145,9 @@ public class CharacterRecognizer {
               break;
             }
           }
-        } else {
+        } else { */
           target = Integer.parseInt(split[imagePix]);
-        }
+      //  }
         targets[index] = target;
         index++;
       }
@@ -145,12 +161,13 @@ public class CharacterRecognizer {
   }
   //process the data, create a NN, still need to call "trainAndReport()" to train
   public static void main(String[] args) {
-    CharacterRecognizer CR = new CharacterRecognizer(16,100,63,0.2);
+    CharacterRecognizer CR = new CharacterRecognizer(16,40,62,0.3,15);
+    System.out.println(CR.trainAndReport(50));
   }
   
-  private class DataSet {
+  
+}
+class DataSet {
     public boolean[][] images;
     public int[] targets;
   }
-}
-
