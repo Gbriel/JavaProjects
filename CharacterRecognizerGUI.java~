@@ -16,7 +16,7 @@ import javax.swing.*;
 import java.awt.*;
 import javax.imageio.*;
 import java.io.*;
-import static org.imgscalr.Scalr.*;
+//import static org.imgscalr.Scalr.*;
 import java.awt.event.*;
 import java.awt.color.*;
 
