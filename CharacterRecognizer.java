@@ -125,11 +125,20 @@ public class CharacterRecognizer {
       boolean[][] images = new boolean[3410][imagePix];
       int index = 0;
       int[] targets = new int[3410];
+    /*  Old version using Paths and Scanner. Doesn't work within .jar files?
       Scanner in = new Scanner(Paths.get("ImgProcessed"+size));
       while(in.hasNextLine()) {
-
       //preprocess the digitdata file via regex
         String[] split = in.nextLine().split(" ");
+        
+    */
+      InputStream is = getClass().getResourceAsStream("ImgProcessed"+size);
+      InputStreamReader isr = new InputStreamReader(is);
+      BufferedReader br = new BufferedReader(isr);
+      String line;
+        while ((line = br.readLine()) != null) {
+        //preprocess the digitdata file via regex
+        String[] split = line.split(" ");
         //create a boolean array, the format used by the NN
         boolean[] px = new boolean[imagePix];
         for(int i = 0; i < imagePix; i++) {
@@ -145,12 +154,14 @@ public class CharacterRecognizer {
         targets[index] = target;
         index++;
       }
-   
+      br.close();
+      isr.close();
+      is.close();
       DataSet data = new DataSet();
       data.images = images;
       data.targets = targets;
       return data;
-    } catch (IOException e) { System.err.println(e.getMessage() + " arrrg"); }
+    } catch (IOException e) { System.err.println(e.getMessage() + " arrrg, error reading in image data."); }
     return null;
   }
   //process the data, create a NN, still need to call "trainAndReport()" to train
