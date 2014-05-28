@@ -94,7 +94,7 @@ class CRFrame extends JFrame {
 
     //the number of "pixels" the image should be scaled down to, in order to be used as input for the NN
     JLabel NNInputResLabel = new JLabel("NN Input size (^2): ");
-    NNInputRes = new JComboBox<Integer>(new Integer[] { 16, 5, 10, 14, 18, 22, 26, 30,40,56,128 });
+    NNInputRes = new JComboBox<Integer>(new Integer[] { 16, 5, 10, 14, 18, 22, 26, 30,40,56});
 
     //the number of hidden neurons the NN will be instantiated with
     JLabel hiddenNeuronsLabel = new JLabel("# hidden layer neurons: ");
